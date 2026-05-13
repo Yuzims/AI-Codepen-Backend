@@ -74,7 +74,7 @@ test('POST /api/generate validates prompt', async () => {
   });
 });
 
-test('POST /api/code/generate returns fallback code without API key', async () => {
+test('POST /api/code/generate returns fallback code without API key', { concurrency: false }, async () => {
   delete process.env.OPENAI_API_KEY;
 
   await withServer(async (port) => {
@@ -91,4 +91,50 @@ test('POST /api/code/generate returns fallback code without API key', async () =
     assert.equal(res.body.provider, 'mock');
     assert.match(res.body.code, /Build a button component/);
   });
+});
+
+test('POST /api/generate uses OpenAI-compatible response when API key exists', { concurrency: false }, async () => {
+  const originalApiKey = process.env.OPENAI_API_KEY;
+  const originalFetch = global.fetch;
+
+  process.env.OPENAI_API_KEY = 'test-key';
+  global.fetch = async () => ({
+    ok: true,
+    async json() {
+      return {
+        choices: [
+          {
+            message: {
+              content: 'function hello() { return "world"; }'
+            }
+          }
+        ]
+      };
+    }
+  });
+
+  try {
+    await withServer(async (port) => {
+      const res = await request(port, {
+        method: 'POST',
+        path: '/api/generate',
+        body: {
+          prompt: 'Create hello function',
+          language: 'javascript'
+        }
+      });
+
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.body.provider, 'openai');
+      assert.match(res.body.code, /function hello/);
+    });
+  } finally {
+    if (originalApiKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = originalApiKey;
+    }
+
+    global.fetch = originalFetch;
+  }
 });

@@ -2,6 +2,7 @@ import http from 'node:http';
 
 const DEFAULT_MODEL = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
 const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1';
+const MAX_PROMPT_LENGTH = 8000;
 
 function sendJson(res, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -30,8 +31,12 @@ async function readJsonBody(req) {
   return JSON.parse(raw);
 }
 
+function sanitizePromptForComment(prompt) {
+  return prompt.replace(/[\r\n]+/g, ' ').trim();
+}
+
 function buildFallbackCode(prompt, language = 'javascript') {
-  return `// AI response placeholder (${language})\n// Prompt: ${prompt}`;
+  return `// AI response placeholder (${language})\n// Prompt: ${sanitizePromptForComment(prompt)}`;
 }
 
 async function generateCode(prompt, language, model) {
@@ -112,7 +117,7 @@ export function createServer() {
           return;
         }
 
-        if (prompt.length > 8000) {
+        if (prompt.length > MAX_PROMPT_LENGTH) {
           sendJson(res, 400, { error: 'Field "prompt" is too long.' });
           return;
         }
