@@ -74,6 +74,21 @@ test('POST /api/generate validates prompt', async () => {
   });
 });
 
+test('POST /api/generate rejects oversized prompt', async () => {
+  await withServer(async (port) => {
+    const res = await request(port, {
+      method: 'POST',
+      path: '/api/generate',
+      body: {
+        prompt: 'x'.repeat(8001)
+      }
+    });
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.error, 'Field \"prompt\" is too long.');
+  });
+});
+
 test('POST /api/code/generate returns fallback code without API key', { concurrency: false }, async () => {
   delete process.env.OPENAI_API_KEY;
 
@@ -98,8 +113,8 @@ test('POST /api/generate uses OpenAI-compatible response when API key exists', {
   const originalFetch = global.fetch;
 
   process.env.OPENAI_API_KEY = 'test-key';
-  global.fetch = async () => ({
-    ok: true,
+    global.fetch = async () => ({
+      ok: true,
     async json() {
       return {
         choices: [
@@ -135,6 +150,79 @@ test('POST /api/generate uses OpenAI-compatible response when API key exists', {
       process.env.OPENAI_API_KEY = originalApiKey;
     }
 
+    global.fetch = originalFetch;
+  }
+});
+
+test('POST /api/generate handles OpenAI failure response', { concurrency: false }, async () => {
+  const originalApiKey = process.env.OPENAI_API_KEY;
+  const originalFetch = global.fetch;
+
+  process.env.OPENAI_API_KEY = 'test-key';
+  global.fetch = async () => ({
+    ok: false,
+    status: 500,
+    async text() {
+      return 'upstream error';
+    }
+  });
+
+  try {
+    await withServer(async (port) => {
+      const res = await request(port, {
+        method: 'POST',
+        path: '/api/generate',
+        body: {
+          prompt: 'Create hello function'
+        }
+      });
+
+      assert.equal(res.statusCode, 502);
+      assert.equal(res.body.error, 'Failed to generate code from AI provider.');
+    });
+  } finally {
+    if (originalApiKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = originalApiKey;
+    }
+    global.fetch = originalFetch;
+  }
+});
+
+test('POST /api/generate handles empty OpenAI content', { concurrency: false }, async () => {
+  const originalApiKey = process.env.OPENAI_API_KEY;
+  const originalFetch = global.fetch;
+
+  process.env.OPENAI_API_KEY = 'test-key';
+  global.fetch = async () => ({
+    ok: true,
+    async json() {
+      return {
+        choices: [{ message: { content: '   ' } }]
+      };
+    }
+  });
+
+  try {
+    await withServer(async (port) => {
+      const res = await request(port, {
+        method: 'POST',
+        path: '/api/generate',
+        body: {
+          prompt: 'Create hello function'
+        }
+      });
+
+      assert.equal(res.statusCode, 502);
+      assert.equal(res.body.error, 'Failed to generate code from AI provider.');
+    });
+  } finally {
+    if (originalApiKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = originalApiKey;
+    }
     global.fetch = originalFetch;
   }
 });

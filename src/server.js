@@ -16,6 +16,12 @@ function sendJson(res, statusCode, payload) {
   res.end(body);
 }
 
+function createHttpError(message, statusCode) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
 async function readJsonBody(req) {
   const chunks = [];
 
@@ -31,12 +37,12 @@ async function readJsonBody(req) {
   return JSON.parse(raw);
 }
 
-function sanitizePromptForComment(prompt) {
+function sanitizePromptWhitespace(prompt) {
   return prompt.replace(/[\r\n]+/g, ' ').trim();
 }
 
 function buildFallbackCode(prompt, language = 'javascript') {
-  return `// AI response placeholder (${language})\n// Prompt: ${sanitizePromptForComment(prompt)}`;
+  return `// AI response placeholder (${language})\n// Prompt: ${sanitizePromptWhitespace(prompt)}`;
 }
 
 async function generateCode(prompt, language, model) {
@@ -71,15 +77,14 @@ async function generateCode(prompt, language, model) {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`AI provider request failed: ${response.status} ${errorText}`);
+    throw createHttpError('AI provider request failed', 502);
   }
 
   const data = await response.json();
   const code = data?.choices?.[0]?.message?.content?.trim();
 
   if (!code) {
-    throw new Error('AI provider returned an empty response');
+    throw createHttpError('AI provider returned an empty response', 502);
   }
 
   return {
@@ -125,7 +130,14 @@ export function createServer() {
         const result = await generateCode(prompt, language, model);
         sendJson(res, 200, result);
       } catch (error) {
-        sendJson(res, 500, { error: error instanceof Error ? error.message : 'Internal server error' });
+        if (error instanceof SyntaxError) {
+          sendJson(res, 400, { error: 'Invalid JSON request body.' });
+          return;
+        }
+
+        const statusCode = Number(error?.statusCode) || 500;
+        const errorMessage = statusCode === 502 ? 'Failed to generate code from AI provider.' : 'Internal server error';
+        sendJson(res, statusCode, { error: errorMessage });
       }
       return;
     }
