@@ -89,7 +89,7 @@ test('POST /api/generate rejects oversized prompt', async () => {
   });
 });
 
-test('POST /api/code/generate returns fallback code without API key', { concurrency: false }, async () => {
+test('POST /api/code/generate alias returns fallback code without API key', { concurrency: false }, async () => {
   delete process.env.OPENAI_API_KEY;
 
   await withServer(async (port) => {

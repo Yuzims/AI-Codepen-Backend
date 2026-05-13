@@ -70,7 +70,7 @@ async function generateCode(prompt, language, model) {
         },
         {
           role: 'user',
-          content: `Language: ${language ?? 'javascript'}\n\nTask:\n${prompt}`
+          content: `Language: ${language ?? 'javascript'}\n\nTask:\n${sanitizePromptWhitespace(prompt)}`
         }
       ]
     })
@@ -135,7 +135,7 @@ export function createServer() {
           return;
         }
 
-        const statusCode = Number(error?.statusCode) || 500;
+        const statusCode = typeof error?.statusCode === 'number' ? error.statusCode : 500;
         const errorMessage = statusCode === 502 ? 'Failed to generate code from AI provider.' : 'Internal server error';
         sendJson(res, statusCode, { error: errorMessage });
       }
