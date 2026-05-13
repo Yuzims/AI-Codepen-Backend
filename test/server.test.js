@@ -108,7 +108,7 @@ test('POST /api/code/generate returns fallback code without API key', { concurre
   });
 });
 
-test('POST /api/generate uses OpenAI-compatible response when API key exists', { concurrency: false }, async () => {
+test('POST /api/generate returns OpenAI response when API key exists', { concurrency: false }, async () => {
   const originalApiKey = process.env.OPENAI_API_KEY;
   const originalFetch = global.fetch;
 
