@@ -1,0 +1,10 @@
+{
+  "name": "ai-codepen-backend",
+  "version": "1.0.0",
+  "description": "Minimal AI code editor backend service",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  }
+}
