@@ -1,0 +1,27 @@
+{
+    "name": "codepen-backend",
+    "version": "1.0.0",
+    "description": "CodePen clone backend",
+    "main": "src/index.js",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js",
+        "test": "jest --forceExit",
+        "verify:gateway": "node verify-anthropic-gateway.js"
+    },
+    "dependencies": {
+        "@anthropic-ai/sdk": "^0.66.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2",
+        "jsonwebtoken": "^9.0.2",
+        "mongoose": "^7.5.0",
+        "openai": "^6.37.0",
+        "uuid": "^9.0.0"
+    },
+    "devDependencies": {
+        "jest": "^30.4.2",
+        "nodemon": "^3.0.1",
+        "supertest": "^6.3.4"
+    }
+}
