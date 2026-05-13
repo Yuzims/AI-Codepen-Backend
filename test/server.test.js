@@ -85,7 +85,7 @@ test('POST /api/generate rejects oversized prompt', async () => {
     });
 
     assert.equal(res.statusCode, 400);
-    assert.equal(res.body.error, 'Field \"prompt\" is too long.');
+    assert.equal(res.body.error, 'Field "prompt" is too long.');
   });
 });
 
@@ -113,8 +113,8 @@ test('POST /api/generate uses OpenAI-compatible response when API key exists', {
   const originalFetch = global.fetch;
 
   process.env.OPENAI_API_KEY = 'test-key';
-    global.fetch = async () => ({
-      ok: true,
+  global.fetch = async () => ({
+    ok: true,
     async json() {
       return {
         choices: [
